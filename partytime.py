@@ -12,15 +12,14 @@ current = { 'name': ""}
 brightness = 40
 
 def getLatest():
-  try:
-    proxy = "http://52.26.44.83/"
-    r = requests.get(proxy)
-    if (r.status_code != 200):
-      print "Could not fetch latest: ", r.status_code
-      return False
-    return r.json()
-  except Exception:
+  proxy = "http://52.26.44.83/"
+  r = requests.get(proxy)
+  if (r.status_code != 200):
+    print "Could not fetch latest: ", r.status_code
     return False
+  return r.json()
+
+
 
 def getExtension(url):
   # get file extension
