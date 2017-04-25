@@ -12,12 +12,15 @@ current = { 'name': ""}
 brightness = 40
 
 def getLatest():
-  proxy = "http://52.26.44.83/"
-  r = requests.get(proxy)
-  if (r.status_code != 200):
-    print "Could not fetch latest: ", r.status_code
-    return
-  return r.json()
+  try:
+    proxy = "http://52.26.44.83/"
+    r = requests.get(proxy)
+    if (r.status_code != 200):
+      print "Could not fetch latest: ", r.status_code
+      return False
+    return r.json()
+  except Exception:
+    return False
 
 def getExtension(url):
   # get file extension
@@ -46,6 +49,7 @@ def showImage():
       '--led-brightness=' + str(brightness),
       '-L',
       '-f',
+      '-C',
       current['filename']
     ]
     FNULL = open(os.devnull, 'w')
@@ -54,13 +58,20 @@ def showImage():
       if (checkIfChanged()):
         child.kill()
         return
-      time.sleep(1)
+      time.sleep(3)
   except subprocess.CalledProcessError, e:
     print "error:", e.output
 
 def checkIfChanged():
-  global current
+  global current, brightness
+  changed = 0
   latest = getLatest()
+  if (latest == False):
+    return 0
+  if (latest['brightness'] != brightness):
+    brightness = latest['brightness']
+    print "New brightness: " + str(brightness)
+    changed = 1
   if (latest['name'] != current['name']):
     extension = getExtension(latest['url'])
     filename = getEmoji(latest['name'], latest['url'], extension)
@@ -70,16 +81,15 @@ def checkIfChanged():
       'extension': extension
     }
     print "Got new emoji: " + latest['name']
-    return 1
-  return 0
+    changed = 1
+  return changed
 
-try:
-  while True:
+while True:
+  try:
     checkIfChanged()
     showImage()
-
-except KeyboardInterrupt:
-  sys.exit(0)
+  except KeyboardInterrupt:
+    sys.exit(0)
 
 
 
