@@ -12,14 +12,13 @@ current = { 'name': ""}
 brightness = 40
 
 def getLatest():
+  print "Getting latest"
   proxy = "http://52.26.44.83/"
   r = requests.get(proxy)
   if (r.status_code != 200):
     print "Could not fetch latest: ", r.status_code
     return False
   return r.json()
-
-
 
 def getExtension(url):
   # get file extension
@@ -39,6 +38,16 @@ def getEmoji(name, url, extension):
     time.sleep(0.1)
   return filename
 
+def showImageAndPoll():
+  child = showImage()
+  if (child == False):
+    return
+  while child.poll() is None:
+    if (checkIfChanged()):
+      child.kill()
+      return
+    time.sleep(3)
+
 def showImage():
   try:
     args = [
@@ -53,13 +62,22 @@ def showImage():
     ]
     FNULL = open(os.devnull, 'w')
     child = subprocess.Popen(args, stdout=FNULL, stderr=subprocess.STDOUT)
-    while child.poll() is None:
-      if (checkIfChanged()):
-        child.kill()
-        return
-      time.sleep(3)
+    return child
   except subprocess.CalledProcessError, e:
     print "error:", e.output
+    return False
+
+
+def killViewer():
+  try:
+    args = ['/home/pi/kill_viewer.sh']
+    FNULL = open(os.devnull, 'w')
+    child = subprocess.Popen(args, stdout=FNULL, stderr=subprocess.STDOUT)
+    while child.poll() is None:
+      time.sleep(1)
+  except subprocess.CalledProcessError, e:
+    print "error:", e.output
+
 
 def checkIfChanged():
   global current, brightness
@@ -83,13 +101,26 @@ def checkIfChanged():
     changed = 1
   return changed
 
+
+
+killViewer()
 while True:
   try:
-    checkIfChanged()
-    showImage()
+    if(checkIfChanged()):
+      showImageAndPoll()
   except KeyboardInterrupt:
     sys.exit(0)
-
-
-
-
+  except requests.ConnectionError:
+    print "Connection error :sob:"
+    if (current['name'] != 'sob_error'):
+      latest = {
+        'name' : 'sob_error',
+        'brightness' : 40
+      }
+      current = {
+        'name': 'sob_error',
+        'filename': '/home/pi/sob.png',
+        'extension': 'png'
+      }
+      showImage()
+  time.sleep(10)
